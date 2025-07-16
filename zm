@@ -1,0 +1,30 @@
+
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@82dee4ba654bd2146511f85f0d013af94670c4de # v1.4.0
+
+      - name: Setup usage of private repo
+        run: git config --global url."https://${{ secrets.BLOCKCHAIN_ACTIONS_TOKEN }}@github.com".insteadOf ssh://git@github.com
+
+      - name: Formatting
+        run: cargo fmt -- --check
+
+      - name: Linting
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+      - name: Run Tests
+        env:
+          BLOCKCHAIN_ACTIONS_TOKEN: ${{ secrets.BLOCKCHAIN_ACTIONS_TOKEN }}
+        run: |
+          RUST_BACKTRACE=full cargo test
+
+  stop-runner:
+    name: kms-connector-tests/stop-runner
+    needs:
+      - start-runner
+      - test-connector
+    runs-on: ubuntu-latest
+    if: ${{ always() }} # required to stop the runner even if the error happened in the previous jobs
+    if: ${{ always() && needs.start-runner.result != 'skipped' }} # required to stop the runner even if the error happened in the previous jobs, but only if start-runner was not skipped
+    steps:
+      - name: Stop EC2 runner
+        uses: zama-ai/slab-github-runner@79939325c3c429837c10d6041e4fd8589d328bac # v1.4.1
